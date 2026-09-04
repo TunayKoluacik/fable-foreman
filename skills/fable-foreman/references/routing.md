@@ -51,10 +51,7 @@ Follow [grok-workers.md](grok-workers.md): probe → note billing mode → tiers
 fixed and small (`grok-4.6` default, `grok-4.5`) → dispatch only through
 `scripts/grok-dispatch.sh`.
 
-- **Grok 4.6** — first-choice **FRONTIER-advisory** seat (adversarial review,
-  second opinion) and a first-choice **WORKHORSE** seat for well-specified
-  implementation. Never the accepting verifier verdict: its seat evidence is
-  billed-tier, not served-tier (verification.md).
+- **Grok 4.6** — first-choice **implementation** seat (bulk WORKHORSE and hard FRONTIER tickets) and first-choice **adversarial-review** seat, at `xhigh` under the user's pre-approval (SKILL.md Step 0 item 5); never the accepting verdict; up to the pre-approval's parallel ceiling (default 15) with disjoint write sets.
 - **Grok 4.5** — lower-capability fallback. **No `xhigh`** — sending it exits 1.
 - **The 200K cliff is a routing boundary, not a surcharge to absorb.** Grok
   reprices the *whole* request 2x above 200K — a jump that is certain from xAI's
