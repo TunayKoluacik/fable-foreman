@@ -148,10 +148,14 @@ not on difficulty alone.** Anthropic publishes the only quantified curve (PRIMAR
 
 Anthropic's own framing: "Long-horizon coding is the other shape." Treat this as
 measured on Anthropic models; the shape is a strong prior for other families, not
-a proven transfer.
+a proven transfer. Everything in Table 4 is *cost evidence and priors for the
+lead's judgment*, never a dispatch rule: effort is chosen per dispatch by the
+lead, and the performance record overrides these priors as it accumulates.
 
 xAI's own published level guidance (PRIMARY, docs.x.ai) points the same way —
-note that `medium`, not `high`, is the level it names for analysis:
+note that `medium`, not `high`, is the level it names for analysis. These are
+xAI's descriptions of its own levels, evidence the lead weighs, not levels this
+file assigns:
 
 | Grok level | xAI says it is for |
 |---|---|
@@ -163,17 +167,22 @@ note that `medium`, not `high`, is the level it names for analysis:
 OpenAI grades `none`→`max` by latency tolerance and difficulty, not by task
 category. No vendor draws an explicit review-vs-build line.
 
-| Surface | Levels | Default to | Escalate when |
+| Surface | Levels | How effort is chosen | Cost evidence to weigh |
 |---|---|---|---|
-| Grok 4.6 | low, medium, high, xhigh | **medium** for review/analysis, **high** for implementation | `xhigh` only for the hardest verification/design |
-| Grok 4.5 | low, medium, high (**no xhigh**) | same, capped at high | — sending `xhigh` exits 1 |
-| Codex | per codex-workers.md | provider default | hard debugging, final review |
-| Claude subagents | scout low / worker high / verifier high | role default | per delegation.md |
+| Grok 4.6 | low, medium, high, xhigh | per dispatch by the lead; with no performance evidence yet, the prior is the highest level the model supports | the `xhigh`-vs-`high` number below is the cost prior the performance record overrides |
+| Grok 4.5 | low, medium, high (**no xhigh**) | same, capped at high because the level does not exist | — the launcher validates effort values and `xhigh` exits 1 |
+| Codex | per codex-workers.md | per dispatch by the lead, among the levels the verified model supports | provider default is the fallback when nothing is known |
+| Claude subagents | scout low / worker high / verifier high | role default unless the lead chooses otherwise | per delegation.md |
 
-The one hard tradeoff number anyone publishes: Grok `xhigh` vs `high` on
-CursorBench buys **+0.9pp accuracy for +20% cost** (69.9% → 70.8%; SECONDARY,
-cross-corroborated, absent from primary xAI pages). Combined with the flat
-analysis curve above, `xhigh` on a review is close to pure waste.
+The one hard tradeoff number anyone publishes: Grok's top effort level vs `high`
+on CursorBench — **a coding benchmark** — buys **+0.9pp accuracy for +20% cost**
+(69.9% → 70.8%; SECONDARY, cross-corroborated, absent from primary xAI pages).
+Read it as a *cost prior*, not a rule: it says what a step up the dial costs on
+one coding benchmark, on one family. Transfer to other task shapes and to other
+model families is unproved (same caveat as the Anthropic curve above — measured
+on one vendor's models, a prior for others). The lead chooses effort per
+dispatch, and the performance record overrides this prior as soon as it has
+comparable outcomes to compare.
 
 Per routing.md: **raising effort on a cheap seat is often better economics than
 raising the tier** — a tier step costs 2-5x (Table 2), an effort step ~20%. That
@@ -202,8 +211,9 @@ reports argue the opposite. Do not overstate it.
 > against the files, and it caught a true self-contradiction; it also asserted an
 > event "does not exist" when the event was simply outside its sandbox. So:
 > **treat Grok findings as leads with citations attached, and confirm each
-> against the named file or line before you act on it.** This is exactly why
-> Grok is an advisory reviewer and never the accepting verdict (Table 5).
+> against the named file or line before you act on it.** This is exactly why a
+> Grok reviewer's findings are cited leads to confirm, not evidence to act on
+> unconfirmed (Table 5's advisory row).
 
 ## Table 5 — Task type to seat
 
@@ -211,25 +221,30 @@ Judgment content decides the class (routing.md); this maps class to a first-choi
 seat once economics is allowed to choose among seats that already clear the bar.
 **The First Law is not suspended here:** if no listed seat clears the bar for a
 task, go up a tier or stop — never take the cheap row because it is cheap.
+**Effort in this table is never prescriptive** — effort is chosen per dispatch by
+the lead (Table 4 is the cost prior); this table places seats, nothing more.
 
 | Task | Class | First choice | Then | Never |
 |---|---|---|---|---|
-| Architecture, ambiguous debugging, final judgment | FRONTIER | LEAD (whichever frontier-class model holds the session) | frontier subagent | Grok, luna, Haiku |
-| Accepting verdict on a change (blind verifier) | FRONTIER | **Claude verifier** — always the acceptor. A **Codex read-only reviewer** is the strongest available cross-family *second opinion* (verification.md), never the acceptor | — | **Grok**, and any off-family seat *as acceptor* — Grok's seat evidence is billed-tier and a Grok reviewer never leads with a verdict (grok-workers.md) |
-| Adversarial review / second opinion | FRONTIER-advisory | **Grok 4.6 @ medium** (Table 4: review curves are flat; escalate to `high` only when the review is itself long-horizon) | Codex sol | — |
-| Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.6 @ high** (<200K) when cost dominates; **terra** (Codex mid tier — the class table's Codex WORKHORSE seat) otherwise; step up to **sol** only when agentic-execution reliability dominates (First Law: unsure → one tier up) — the only measured head-to-head shows Grok trailing *sol* on DeepSWE and Terminal-Bench (Table 4b). No comparable execution measurement exists for Sonnet 5, whose only cross-model number here is the composite index (where Grok leads 61 to 55) — so do not pick Sonnet over Grok on reliability grounds this table cannot support. | Sonnet 5 / terra on pool grounds | — |
+| Architecture, ambiguous debugging, final judgment | FRONTIER | LEAD (whichever frontier-class model holds the session) | frontier subagent | luna, Haiku |
+| Accepting verdict on a change (blind verifier) | FRONTIER | **Claude verifier** — the default evidence seat; **the lead accepts**. A **Codex read-only reviewer** is the strongest available cross-family *second opinion* (verification.md) | any qualified reviewer (model + transport + allowed tools + assigned checks, with a named executor for every required deterministic check) may give a scoped verdict, its evidence tier disclosed (grok-workers.md, verification.md) | **a reviewer verdict alone as acceptance proof** |
+| Adversarial review / second opinion | FRONTIER-advisory | **Grok 4.6**, effort by lead judgment (Table 4 is the cost prior) | Codex sol | — |
+| Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.6**, effort by lead judgment (Table 4 is the cost prior), below the 200K cliff, when cost dominates; **terra** (Codex mid tier — the class table's Codex WORKHORSE seat) otherwise; step up to **sol** only when agentic-execution reliability dominates (First Law: unsure → one tier up) — the only measured head-to-head shows Grok trailing *sol* on DeepSWE and Terminal-Bench (Table 4b). No comparable execution measurement exists for Sonnet 5, whose only cross-model number here is the composite index (where Grok leads 61 to 55) — so do not pick Sonnet over Grok on reliability grounds this table cannot support. | Sonnet 5 / terra on pool grounds | — |
 | Large-context implementation (>200K) | WORKHORSE | **Sonnet 5** | terra | **Grok (cliff)**, Haiku (200K cap) |
 | Mechanical edits, extraction, scanning | FAST | **gpt-5.6-luna @ low** | Haiku 4.5 | frontier seats |
 | Repo-wide sweep (>500K) | any | Claude or Codex (1M ctx) | — | **Grok (500K ceiling)** |
 
-> **On "FRONTIER-advisory" — what that row does and does not grant.** A billed-tier
-> seat never carries class-sensitive *authority* (verification.md): it cannot make
-> a seat `verified`, cannot supply an accepting verdict, and cannot be the
-> FRONTIER judgment a decision rests on. What it can do is *produce findings* that
-> a frontier seat then adjudicates. "Advisory" names that asymmetry — the seat
-> argues, the foreman decides, and nothing is accepted on the strength of the
-> advisory seat alone. If you catch yourself accepting a change *because* the
-> advisory reviewer approved it, that is the smuggle this note exists to stop.
+> **On "FRONTIER-advisory" — what that row does and does not grant.** The row
+> places a seat where its *findings* are wanted; it does not move the acceptance
+> decision, because acceptance is the lead's and no reviewer verdict alone is
+> acceptance proof. What an advisory reviewer does is *produce findings, with
+> citations*, that the lead then adjudicates. "Advisory" names that asymmetry —
+> **the seat argues, the foreman decides** — and a seat's evidence tier
+> (verification.md Layer 0) travels with its findings as *disclosure*, never as a
+> reason to discount the seat or to skip confirming its citations. If you catch
+> yourself accepting a change *because* the advisory reviewer approved it, that is
+> the smuggle this note exists to stop: **never accept because the advisory
+> reviewer approved**.
 
 ## Table 6 — Which pool a seat drains
 

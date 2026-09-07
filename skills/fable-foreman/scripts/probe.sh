@@ -41,7 +41,7 @@ fi
 # The flag file may hold a line "parallel: N" naming the fan-out ceiling (default 15).
 if [ "${FOREMAN_GROK_PREAPPROVED:-}" = "1" ] || [ -f "${FOREMAN_HOME:-$HOME/.foreman}/grok-preapproved" ]; then
   GROK_PAR=$(grep -E '^parallel: *[0-9]+' "${FOREMAN_HOME:-$HOME/.foreman}/grok-preapproved" 2>/dev/null | head -1 | grep -oE '[0-9]+' || true)
-  echo "grok billing: PRE-APPROVED (user config) — consent ask skipped, budget step-down does not apply to Grok; grok-4.6 @ xhigh for implementation and review; parallel ceiling ${GROK_PAR:-15}"
+  echo "grok billing: PRE-APPROVED (user config) — consent ask skipped, budget step-down does not apply to Grok; grok effort: lead judgment per dispatch (no-evidence prior: highest supported); parallel ceiling ${GROK_PAR:-15} (reported default, not a measured maximum)"
 fi
 
 # Grok CLI (xAI). Binary is normally at $HOME/.grok/bin/grok and may or may

@@ -35,6 +35,8 @@ Documentation is not entitlement, and **model IDs differ by auth mode** — this
 
 Map verified tiers to FRONTIER / WORKHORSE / FAST by the provider's published positioning for them (routing.md), and record the mapping in the ledger so it's auditable.
 
+**Effort is chosen per dispatch by the lead**, from the levels the verified model actually supports — the user's configured `model_reasoning_effort` is their expressed preference and the fallback when nothing else is known, not a ceiling on the lead's judgment. Never send a level the account's model does not support; verify it the same way you verify a tier, with one tiny call. model-matrix.md Table 4 is the *cost* prior, and the performance record overrides it.
+
 ## Transport (v0.3): visible subagents first, direct exec as fallback
 
 Before v0.3 the skill shelled out to `codex exec` directly from the foreman's own Bash. That works, but the Codex worker is invisible to the user (no presence in the harness UI), the foreman must hand-roll background polling and LOST detection, and long builds tie ledger hygiene to manual job bookkeeping. v0.3 changes the default:
@@ -49,7 +51,7 @@ Cost: one FAST wrapper's tokens per dispatch (small; the wrapper does no thinkin
 
 **The wrapper contract (put it in the wrapper's prompt verbatim):**
 
-1. Run `scripts/codex-dispatch.sh` (in this skill's directory) exactly once, with exactly the six arguments given in your ticket — ticket file, model, effort, sandbox, artifact path, workdir. Never compose a raw `codex` command, never add shell operators around the launcher, never run it twice, never edit any file yourself. Set your shell tool's timeout to the deadline named in the ticket.
+1. Run `scripts/codex-dispatch.sh` (in this skill's directory) exactly once, with exactly the six arguments given in your ticket — ticket file, model, effort, sandbox, artifact path, workdir. There is no session-resume slot in this launcher (unlike Grok's), so every dispatch is a fresh one; the effort argument is whatever the lead chose for this dispatch, at a level the model supports. Never compose a raw `codex` command, never add shell operators around the launcher, never run it twice, never edit any file yourself. Set your shell tool's timeout to the deadline named in the ticket.
 2. Relay two things, clearly separated: first the launcher's **transport envelope** (its stdout: exit code, duration, seat evidence — verbatim), then the Codex worker's final message, produced by running **exactly** this read-only command against the JSONL artifact and relaying its stdout verbatim — it prints the `text` of the last agent-message `item.completed` event in the stream:
 
    ```bash
@@ -83,7 +85,7 @@ The wrapper is transport, not delegation — this is the sanctioned carve-out to
 
 ## Invocation pattern
 
-Non-interactive, one task per invocation, seat and effort pinned per the routing decision:
+Non-interactive, one task per invocation, seat and effort pinned into the call exactly as the lead chose them for this dispatch (a supported level only):
 
 ```bash
 # Advisory / review work — read-only sandbox:
@@ -102,9 +104,11 @@ codex exec -m <verified-model> -c model_reasoning_effort=<level> \
 
 ## Reading back
 
-Codex workers follow the same contract as Claude workers: **status as the first line of the final message** (`DONE` / `DONE_WITH_CONCERNS` / `NEEDS_CONTEXT` / `BLOCKED` — put this in every execution ticket's OUTPUT FORMAT), evidence not narrative, artifacts to `.foreman/scratch/` with paths. A Codex read-only reviewer asked for a review verdict may lead with the verdict vocabulary (`PASS` / `FAIL` / `PASS_WITH_NOTES`) as a reporting convention (verification.md) — the accepting verdict on a change is still the Claude verifier's. Treat Codex self-reports with the same distrust as any worker's — independent evaluators have measured frontier tiers gaming checks at record rates. Cross-family review is the default: Claude verifies Codex work.
+Codex workers follow the same contract as Claude workers: **status as the first line of the final message** (`DONE` / `DONE_WITH_CONCERNS` / `NEEDS_CONTEXT` / `BLOCKED` — put this in every execution ticket's OUTPUT FORMAT), evidence not narrative, artifacts to `.foreman/scratch/` with paths. A Codex read-only reviewer asked for a review verdict may lead with the verdict vocabulary (`PASS` / `FAIL` / `PASS_WITH_NOTES`) as a reporting convention (verification.md) — and that verdict is scoped **evidence**: **the lead accepts**, a reviewer verdict supplies evidence rather than acceptance, and a reviewer verdict alone is never acceptance proof. Reviewer qualification is model + transport + allowed tools + assigned checks, with a **named executor** for every required deterministic check; a check nobody ran stays UNVERIFIED. Treat Codex self-reports with the same distrust as any worker's — independent evaluators have measured frontier tiers gaming checks at record rates. Cross-family review is the default: Claude verifies Codex work.
 
 **The relay is a claim.** A haiku transport wrapper was observed (2026-08-18) relaying an invented report while the on-disk artifact held the real, schema-valid one. For any class-sensitive read — verdicts, findings entering a fix wave, statuses that decide routing — the foreman reads the artifact file directly; the relay serves notification and status only.
+
+**Repairs and role transition — Codex has no resume.** `codex-dispatch.sh` exposes no session-resume argument, so a repair ticket to Codex is a **fresh dispatch**, and a fresh dispatch is a *replacement*: the new worker carries the preserved contract, the findings list, and the evidence from the earlier attempt, written into its ticket. It does not carry the earlier worker's reasoning, and nothing about the earlier session should be described as retained. A reviewer never edits the candidate it is judging within the same assignment; changing a Codex reviewer into a fixer is an **explicit journaled writable dispatch** (`workspace-write`), its earlier verdict does not cover the edits it then makes, affected checks are re-run, and a **different fresh context** assesses the repaired revision (delegation.md, verification.md).
 
 ## Quota notes
 
