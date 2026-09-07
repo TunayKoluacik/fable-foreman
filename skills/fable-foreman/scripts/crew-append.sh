@@ -34,11 +34,14 @@
 #   owner. Closure never blocks indefinitely.
 #
 # STALE-OWNER RECLAIM
-#   A lock is reclaimed ONLY when the owner file records this same host AND
-#   `kill -0 <pid>` fails, i.e. the owner is provably not alive here. A lock
-#   owned by another host is NEVER reclaimed, no matter how old, and neither is
-#   one whose pid still exists. Known limitation: pid reuse on this host could
-#   make a dead owner look alive; that is the safe direction (we wait).
+#   A lock is reclaimed ONLY when the owner file records this same host AND the
+#   owner pid is gone by TWO independent tests: `kill -0 <pid>` fails AND
+#   `ps -p <pid>` lists nothing. `kill -0` alone is not proof of death — it also
+#   fails with EPERM for a live process owned by another user, which is
+#   indistinguishable from ESRCH at the shell. Either test reporting the process
+#   present means alive, so the lock is left where it is. A lock owned by another
+#   host is NEVER reclaimed, no matter how old. Known limitation: pid reuse on
+#   this host could make a dead owner look alive; that is the safe direction.
 #
 # INTERRUPTED-APPEND RECOVERY
 #   Under the lock, the tail of the target is scanned. Anything after the last
@@ -47,9 +50,15 @@
 #   back to that last complete END. All prior complete records are preserved
 #   byte-for-byte. A fragment is never treated as an already-applied closure,
 #   so re-running after an interruption commits exactly one complete record.
-#   The lock holder also reaps <target>.staging.<pid> files left by writers that
-#   were SIGKILLed before their EXIT trap ran, but only when that pid is
-#   provably not alive here.
+#   The truncated copy is published by atomic rename (mv), never by truncating
+#   the live file: `>` would empty the target before the copy finished, so a
+#   kill or an I/O error mid-copy would destroy every committed record. Rename
+#   changes the target's inode, so any pre-existing hard link to the old file
+#   keeps the OLD content and does not follow the update — acceptable here (the
+#   global record is addressed by path, not by link), but noted.
+#   The lock holder also reaps <target>.staging.<pid> and <target>.trunc.<pid>
+#   files left by writers that were SIGKILLed before their EXIT trap ran, but
+#   only when that pid is gone by both liveness tests above.
 #
 # DURABILITY
 #   The block is written to <target>.staging.<pid>, fsynced, appended to the
@@ -86,6 +95,14 @@
 #       ${CREW_APPEND_TEST_PAUSE_SECS:-3600}, simulating a writer killed
 #       part-way through the append. Leaves exactly the fragment the recovery
 #       path is required to quarantine.
+#   CREW_APPEND_TEST_PAUSE_BEFORE_RENAME=1
+#       During fragment quarantine, stop after <target>.trunc.<pid> is written
+#       and fsynced but BEFORE the atomic rename that publishes it, then sleep
+#       ${CREW_APPEND_TEST_PAUSE_SECS:-3600}. A kill here must leave the target
+#       intact (old content), never empty.
+#   CREW_APPEND_TEST_FAIL_REPLACE=1
+#       Force the atomic-rename step to fail, exercising the branch that keeps
+#       the intact copy, names it in the receipt and exits 74.
 #   CREW_APPEND_LOCK_WAIT=<seconds>  Bounded wait override (default 30).
 #
 # No cross-machine synchronization is assumed. No database. Read-only callers
@@ -148,6 +165,30 @@ FSYNC_MECHANISM="python3 os.fsync"
 [ -n "$PY3" ] || FSYNC_MECHANISM="sync(8) fallback (python3 absent)"
 
 fsync_file() {
+  if [ -n "$PY3" ]; then
+    "$PY3" -c 'import os,sys
+fd=os.open(sys.argv[1],os.O_RDONLY)
+try:
+    os.fsync(fd)
+finally:
+    os.close(fd)' "$1" 2>/dev/null || sync
+  else
+    sync
+  fi
+}
+
+# ---- liveness --------------------------------------------------------------
+# `kill -0` failing is NOT proof of death: it also fails with EPERM for a live
+# process owned by another user. Two independent tests; either one reporting the
+# process present means alive.
+pid_alive() {
+  [ -n "${1:-}" ] || return 1
+  kill -0 "$1" 2>/dev/null && return 0
+  [ -n "$(ps -p "$1" -o pid= 2>/dev/null)" ] && return 0
+  return 1
+}
+
+fsync_dir() {
   if [ -n "$PY3" ]; then
     "$PY3" -c 'import os,sys
 fd=os.open(sys.argv[1],os.O_RDONLY)
@@ -227,10 +268,10 @@ while :; do
   O_START=$(owner_field start)
 
   # Reclaim ONLY a provably dead owner on this same host.
-  if [ -n "$O_PID" ] && [ "$O_HOST" = "$HOST" ] && ! kill -0 "$O_PID" 2>/dev/null; then
+  if [ -n "$O_PID" ] && [ "$O_HOST" = "$HOST" ] && ! pid_alive "$O_PID"; then
     # Re-read under the same name to reduce the chance of removing a lock that
     # was just re-taken by a live process between our read and our remove.
-    if [ "$(owner_field pid)" = "$O_PID" ] && ! kill -0 "$O_PID" 2>/dev/null; then
+    if [ "$(owner_field pid)" = "$O_PID" ] && ! pid_alive "$O_PID"; then
       printf 'RECLAIM stale lock (owner pid=%s host=%s start=%s is not alive on this host)\n' "$O_PID" "$O_HOST" "${O_START:-unknown}"
       rm -f "$OWNER_FILE" 2>/dev/null || true
       rmdir "$LOCKDIR" 2>/dev/null || true
@@ -244,7 +285,7 @@ while :; do
     write_receipt "lock acquisition timed out" \
 "Lock directory: $LOCKDIR
 Lock owner (not reclaimed): pid=${O_PID:-unknown} host=${O_HOST:-unknown} start=${O_START:-unknown}
-Reason not reclaimed: $( [ "${O_HOST:-}" != "$HOST" ] && printf 'owner is on a different host — a foreign-host lock is never reclaimed' || printf 'owner pid still exists on this host' ).
+Reason not reclaimed: $( [ "${O_HOST:-}" != "$HOST" ] && printf 'owner is on a different host — a foreign-host lock is never reclaimed' || printf 'owner pid still exists on this host (kill -0 and/or ps report it present)' ).
 Waited: ${LOCK_WAIT}s (CREW_APPEND_LOCK_WAIT)."
     exit 75
   fi
@@ -256,12 +297,12 @@ done
 # other than ours belongs to a writer that died before its EXIT trap could run
 # (SIGKILL). Reap only the ones whose pid is provably not alive here, so a live
 # writer's file is never removed.
-for _stale in "$TARGET".staging.*; do
+for _stale in "$TARGET".staging.* "$TARGET".trunc.*; do
   [ -e "$_stale" ] || continue
-  _spid=${_stale##*.staging.}
+  _spid=${_stale##*.}
   [ "$_spid" = "$$" ] && continue
   case "$_spid" in ''|*[!0-9]*) continue ;; esac
-  kill -0 "$_spid" 2>/dev/null || rm -f "$_stale"
+  pid_alive "$_spid" || rm -f "$_stale"
 done
 
 # ---- interrupted-append recovery (under the lock) --------------------------
@@ -296,22 +337,44 @@ No lock was left behind and nothing was written."
       write_receipt "quarantine write failed" "Could not append the trailing fragment to $QUAR; target left untouched."
       exit 74
     }
+    # Build the truncated copy beside the target, then publish it by atomic
+    # rename. Never `> "$TARGET"`: that empties the live file first, so a kill
+    # or an I/O error mid-copy would destroy every committed record.
     TRUNC="$TARGET.trunc.$$"
     if [ "$LAST_END" -gt 0 ]; then
-      sed -n "1,${LAST_END}p" "$TARGET" > "$TRUNC"
+      sed -n "1,${LAST_END}p" "$TARGET" > "$TRUNC" 2>/dev/null || {
+        printf '%s: ERROR: cannot write truncated copy %s\n' "$PROG" "$TRUNC" >&2
+        write_receipt "truncated-copy write failed" "Target $TARGET was NOT modified. The fragment is recorded in $TARGET.quarantine."
+        exit 74
+      }
     else
       : > "$TRUNC"
     fi
+    # Carry the target's mode across the rename (BSD and GNU stat differ).
+    T_MODE=$(stat -f '%Lp' "$TARGET" 2>/dev/null) || T_MODE=$(stat -c '%a' "$TARGET" 2>/dev/null) || T_MODE=""
+    [ -n "$T_MODE" ] && chmod "$T_MODE" "$TRUNC" 2>/dev/null
     fsync_file "$TRUNC"
-    # Replace contents in place (keeps the inode, mode and any hard links).
-    if ! { cat "$TRUNC" > "$TARGET"; } 2>/dev/null; then
-      rm -f "$TRUNC"
-      printf '%s: ERROR: cannot truncate target %s\n' "$PROG" "$TARGET" >&2
-      write_receipt "truncate after quarantine failed" "Fragment was copied to $TARGET.quarantine but the target could not be truncated."
+
+    # TEST HOOK: inert unless CREW_APPEND_TEST_PAUSE_BEFORE_RENAME=1.
+    if [ "${CREW_APPEND_TEST_PAUSE_BEFORE_RENAME:-}" = "1" ]; then
+      printf 'TEST-HOOK truncated copy staged, rename not yet issued, pid %s\n' "$$"
+      sleep "${CREW_APPEND_TEST_PAUSE_SECS:-3600}"
+    fi
+
+    # TEST HOOK: CREW_APPEND_TEST_FAIL_REPLACE=1 forces the failure branch.
+    if [ "${CREW_APPEND_TEST_FAIL_REPLACE:-}" = "1" ] || ! mv -f "$TRUNC" "$TARGET" 2>/dev/null; then
+      printf '%s: ERROR: could not publish the truncated copy over %s\n' "$PROG" "$TARGET" >&2
+      write_receipt "atomic replace after quarantine failed" \
+"The target was NOT modified and is byte-identical to what it held on entry.
+The intact truncated copy is kept for recovery at:
+  $TRUNC
+The fragment is already recorded in $TARGET.quarantine. Recover by hand with:
+  mv -f \"$TRUNC\" \"$TARGET\"
+or simply re-run this command once the cause (permissions, disk) is fixed."
       exit 74
     fi
-    rm -f "$TRUNC"
     fsync_file "$TARGET"
+    fsync_dir "$TMPDIR_BASE"
     printf 'QUARANTINED incomplete fragment (%s lines) -> %s\n' "$TAIL_CONTENT" "$QUAR"
   fi
 fi

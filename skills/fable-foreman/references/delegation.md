@@ -140,7 +140,7 @@ apply. Apply the first matching row:
 | 1 | Failure caused by the ticket (ambiguity, missing context) | Fix the ticket; retry **same seat**. Logged on Attempts; not counted as an attributable model-quality failure |
 | 2 | First real failure at this seat | Retry same seat with something changed: corrected ticket, added context, or raised effort |
 | 3 | Second real failure at this seat | Escalate one seat, **or** the foreman takes over — whichever the task's class warrants. A takeover records a **concrete cause** and a **bounded stopping point** (what the lead will do, and where ownership hands back), and the **former writer is proven terminal first** |
-| 4 | Failure at the top seat (or foreman takeover failed) | Stop; report to the user with evidence |
+| 4 | Failure at the top seat (or foreman takeover failed) | **Park this outcome** as `NEEDS USER` with the evidence and a concrete question; continue every independent authorized outcome; the run halts only when none remain |
 | 5 | Two consecutive failed **fix waves** against the same findings list | Recovery (below): exactly one changed-approach attempt, then park — regardless of seats remaining |
 
 **Ticket corrections are bounded.** A third ticket correction on one outcome id with
@@ -191,7 +191,7 @@ observation still cannot be made is reported **incomplete** (verification.md).
 When usage limits bite, do **not** blanket-downshift. Re-run the routing decision for each remaining task:
 
 - If a cheaper seat still clears that task's quality bar (tasks are often conservatively over-provisioned), step down **and journal it visibly**.
-- If no affordable seat clears the bar, **stop after the current task and tell the user**. A clean stop beats degraded judgment — the First Law is not suspended by budget pressure.
+- If no affordable seat clears a task's bar, **park that task** as `NEEDS USER` — same shape as any park: evidence, partial-artifact ownership, the missing criterion, a concrete question (raise the cap, wait for quota, accept a documented reduction), and the resume condition. Continue every remaining task that a surviving seat clears **at its own bar**, and halt only when no independent authorized work remains. Parked-not-degraded beats degraded judgment — the First Law is not suspended by budget pressure, and neither is park-and-continue.
 
 ## The finding contract (every reviewer, every provider)
 
@@ -233,10 +233,12 @@ naive grep check. So:
   banned for a reason; a self-assigned `BLOCKER` is the same species of claim.
   Re-rank every finding before it enters a fix wave.
 - **`INFERRED` means not-yet-actionable, never discarded.** An `INFERRED` finding
-  that would be a BLOCKER if true is *investigated* — the foreman establishes the
-  evidence itself or re-tasks it with a narrower scope. Dropping hard, poorly-cited
-  findings while shipping well-cited trivia is the failure mode this contract
-  would otherwise create.
+  the foreman's **own re-rank** puts at **MAJOR or worse** gets one investigation
+  *bounded by the consequence* — a named question, a stopping observation, a scope
+  proportionate to what it would cost if true; the foreman establishes the evidence
+  itself or re-tasks it narrowly, and only then dismisses or promotes it
+  (verification.md, "Finding triage"). Dropping hard, poorly-cited findings while
+  shipping well-cited trivia is the failure mode this contract would otherwise create.
 
 ## Self-correction — resolve it, don't escalate it
 
@@ -254,7 +256,7 @@ own reasoning about the candidate, and that context is *normal* for repair work.
 transport paths, by family:
 
 - **Claude** — continue the same harness session/subagent thread where the harness supports continuation.
-- **Grok** — resume the builder's session id through `scripts/grok-dispatch.sh`; a resumed session is relied on for a *writable* repair only where the runtime fixture has shown the resumed route actually carries write tools, otherwise dispatch fresh and writable.
+- **Grok** — resume the builder's session id through `scripts/grok-dispatch.sh` **on the same profile it was built under**: a `workspace`→`workspace` resume is evidenced to carry write tools (grok-workers.md, "Multi-turn continuation", 2026-08-17: a resumed worker recalled and re-ran its own code), and that is the path for builder repairs. **Cross-profile resume is refused** — a `read-only` reviewer that becomes a fixer always gets a **fresh `workspace` dispatch**, never a resume of its review session (observed refusal, 2026-09-07).
 - **Codex** — **fresh dispatch, which is replacement, not retained context**: a new worker carrying the same contract, the findings, and the evidence. Say so plainly; do not describe the earlier context as tainted or contaminated.
 
 Changing the owner is an escalation with a recorded cause (precedence row 3), not a
@@ -274,7 +276,10 @@ a fixer, and it is not disqualified by family or by its earlier verdict — but:
 two consecutive failed fix waves on the same findings list → one recovery, then park
 (row 5). Never a third identical retry.
 
-**Stopping is not escalating.** The foreman still stops — with evidence — for:
+**Stopping is not escalating — and stopping an outcome is not halting the run.**
+Every "stop" below means *park that outcome* as `NEEDS USER` with the evidence and a
+concrete question, then continue every independent authorized outcome; the run halts
+only when none remain ("Park and continue"). The foreman still stops — with evidence — for:
 
 - **an ask that was advisory in the first place.** If the user requested a review,
   an audit, an opinion, or a plan, the deliverable is findings. Self-correction

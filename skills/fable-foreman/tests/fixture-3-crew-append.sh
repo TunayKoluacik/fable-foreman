@@ -16,6 +16,12 @@
 #       complete records byte-identical (sha256 of the prefix), re-run commits
 #       exactly one record
 #   3.9 foreign-host lock (even with a dead pid) is NEVER reclaimed -> exit 75
+#   3.10 the atomic replace that publishes the truncated copy fails -> target
+#        byte-identical, the intact copy survives and is named in the receipt
+#   3.11 kill -9 after the truncated copy is staged but BEFORE the rename ->
+#        target still intact (never empty); next call recovers and commits one
+#
+# Every lock-path case also asserts a bounded return time.
 #
 # The target is always a file under one mktemp -d. This fixture never names
 # $HOME/.foreman or the real crew-performance.md; run-all.sh additionally
@@ -51,15 +57,30 @@ mkrec() { # mkrec <path> <run> <outcome> <rev> <body-text>
   } > "$1"
 }
 
+# Plain calls only. NEVER write `VAR=1 run_append ...`: in POSIX sh an
+# environment prefix on a FUNCTION persists in the calling shell after the
+# function returns, so a test hook set that way leaks into every later case.
+# Env-prefixed calls go through `env VAR=1 sh "$SCRIPT" ...` instead.
 run_append() { sh "$SCRIPT" "$@"; }
+
+# assert_bounded <name> <t0> <t1> <configured wait> — the helper must never
+# block past its bound; 2s of slack covers process start-up and the poll sleep.
+assert_bounded() {
+  _el=$(( $3 - $2 ))
+  if [ "$_el" -le "$(( $4 + 2 ))" ]; then
+    pass "$1 (returned in ${_el}s, bound ${4}s+2)"
+  else
+    fail "$1 (returned in ${_el}s, bound ${4}s+2)"
+  fi
+}
 n_records() { grep -c '^END fp=' "$TARGET" 2>/dev/null || true; }
 
 # ---------------------------------------------------------------- 3.1
 mkrec "$TMP/r1" run-aaa out-1 1 "first closure"
 mkrec "$TMP/r2" run-bbb out-2 1 "second closure"
-CREW_APPEND_LOCK_WAIT=15 run_append "$TMP/r1" "$TARGET" > "$TMP/c1.out" 2>&1 &
+env CREW_APPEND_LOCK_WAIT=15 sh "$SCRIPT" "$TMP/r1" "$TARGET" > "$TMP/c1.out" 2>&1 &
 P1=$!
-CREW_APPEND_LOCK_WAIT=15 run_append "$TMP/r2" "$TARGET" > "$TMP/c2.out" 2>&1 &
+env CREW_APPEND_LOCK_WAIT=15 sh "$SCRIPT" "$TMP/r2" "$TARGET" > "$TMP/c2.out" 2>&1 &
 P2=$!
 wait $P1; RC1=$?
 wait $P2; RC2=$?
@@ -159,8 +180,11 @@ else
   fail "3.6 lock owner pid is provably dead"
 fi
 if [ -d "$TARGET.lock" ]; then pass "3.6 killed writer left the lock behind"; else fail "3.6 killed writer left the lock behind"; fi
-run_append "$TMP/r3" "$TARGET" > "$TMP/reclaim.out" 2>&1; RCK=$?
+T6A=$(date +%s)
+env CREW_APPEND_LOCK_WAIT=6 sh "$SCRIPT" "$TMP/r3" "$TARGET" > "$TMP/reclaim.out" 2>&1; RCK=$?
+T6B=$(date +%s)
 assert_eq "3.6 next call exits 0 after reclaiming" "0" "$RCK"
+assert_bounded "3.6 reclaim path returned within the bound" "$T6A" "$T6B" 6
 assert_contains "3.6 reclaim is reported"  "$TMP/reclaim.out" "RECLAIM stale lock"
 assert_contains "3.6 record committed"     "$TMP/reclaim.out" "APPENDED key=RECORD host=$HOSTNAME_NOW run=run-ccc outcome=out-3 rev=1"
 assert_eq "3.6 four complete records now"  "4" "$(n_records)"
@@ -176,10 +200,14 @@ printf 'pid=%s\nhost=%s\nstart=%s\n' "$LIVE" "$HOSTNAME_NOW" "1970-01-01T00:00:0
 SHA_LIVE=$(sha_of "$TARGET")
 mkrec "$TMP/r4" run-ddd out-4 1 "fourth closure"
 T0=$(date +%s)
-CREW_APPEND_LOCK_WAIT=2 run_append "$TMP/r4" "$TARGET" > "$TMP/live.out" 2>&1; RCL=$?
+env CREW_APPEND_LOCK_WAIT=2 sh "$SCRIPT" "$TMP/r4" "$TARGET" > "$TMP/live.out" 2>&1; RCL=$?
 T1=$(date +%s)
 assert_eq "3.7 live same-host owner: exit 75" "75" "$RCL"
-if [ "$((T1 - T0))" -le 8 ]; then pass "3.7 returned within the bound ($((T1 - T0))s for a 2s wait)"; else fail "3.7 returned within the bound ($((T1 - T0))s)"; fi
+assert_bounded "3.7 returned within the bound" "$T0" "$T1" 2
+# The owner must be seen as alive by BOTH liveness tests the script uses:
+# kill -0 alone is not proof of death (EPERM on another user's live process).
+if kill -0 "$LIVE" 2>/dev/null; then pass "3.7 live owner detected by kill -0"; else fail "3.7 live owner detected by kill -0"; fi
+if [ -n "$(ps -p "$LIVE" -o pid= 2>/dev/null)" ]; then pass "3.7 live owner detected by ps -p"; else fail "3.7 live owner detected by ps -p"; fi
 assert_eq "3.7 nothing written" "$SHA_LIVE" "$(sha_of "$TARGET")"
 if [ -d "$TARGET.lock" ]; then pass "3.7 live owner's lock left in place"; else fail "3.7 live owner's lock left in place"; fi
 LIVE_RECEIPT=$(ls -1t "$RECEIPTS"/crew-append-receipt-*.md 2>/dev/null | head -1)
@@ -197,8 +225,11 @@ rm -rf "$TARGET.lock"
 mkdir -p "$TARGET.lock"
 printf 'pid=%s\nhost=%s\nstart=%s\n' "999999" "some-other-mac.invalid" "1970-01-01T00:00:00Z" > "$TARGET.lock/owner"
 SHA_FOREIGN=$(sha_of "$TARGET")
-CREW_APPEND_LOCK_WAIT=2 run_append "$TMP/r4" "$TARGET" > "$TMP/foreign.out" 2>&1; RCF=$?
+T9A=$(date +%s)
+env CREW_APPEND_LOCK_WAIT=2 sh "$SCRIPT" "$TMP/r4" "$TARGET" > "$TMP/foreign.out" 2>&1; RCF=$?
+T9B=$(date +%s)
 assert_eq "3.9 foreign-host lock: exit 75" "75" "$RCF"
+assert_bounded "3.9 foreign-host path returned within the bound" "$T9A" "$T9B" 2
 assert_eq "3.9 foreign-host lock: nothing written" "$SHA_FOREIGN" "$(sha_of "$TARGET")"
 if [ -d "$TARGET.lock" ]; then pass "3.9 foreign-host lock never removed"; else fail "3.9 foreign-host lock never removed"; fi
 assert_absent "3.9 no reclaim attempted on a foreign host" "$TMP/foreign.out" "RECLAIM stale lock"
@@ -230,8 +261,11 @@ wait "$TORN" 2>/dev/null
 wait_until 5 '! kill -0 "$TORN" 2>/dev/null' || true
 assert_eq "3.8 fragment is not a record (END count unchanged)" "$RECORDS_BEFORE" "$(n_records)"
 
-run_append "$TMP/r4" "$TARGET" > "$TMP/recover.out" 2>&1; RCV=$?
+T8A=$(date +%s)
+env CREW_APPEND_LOCK_WAIT=6 sh "$SCRIPT" "$TMP/r4" "$TARGET" > "$TMP/recover.out" 2>&1; RCV=$?
+T8B=$(date +%s)
 assert_eq "3.8 re-run exits 0" "0" "$RCV"
+assert_bounded "3.8 recovery path returned within the bound" "$T8A" "$T8B" 6
 assert_contains "3.8 fragment quarantined" "$TMP/recover.out" "QUARANTINED incomplete fragment"
 assert_contains "3.8 record then committed" "$TMP/recover.out" "APPENDED key=RECORD host=$HOSTNAME_NOW run=run-ddd outcome=out-4 rev=1"
 assert_file "3.8 quarantine file exists" "$TARGET.quarantine"
@@ -242,7 +276,86 @@ assert_eq "3.8 exactly one more complete record" "$((RECORDS_BEFORE + 1))" "$(n_
 head -c "$PREFIX_BYTES" "$TARGET" > "$TMP/prefix.after"
 assert_eq "3.8 prior complete records byte-identical" "$PREFIX_SHA" "$(sha_of "$TMP/prefix.after")"
 
+# ---------------------------------------------------------------- 3.10
+# The quarantine path replaces the target by atomic rename. If that publish step
+# fails, the target must be untouched and the intact truncated copy must survive
+# and be named in the receipt — never a half-emptied global record.
+mkrec "$TMP/r5" run-fff out-5 1 "fifth closure"
+add_fragment() { # append a header with no END: an incomplete fragment
+  printf '\nRECORD host=%s run=frag-%s outcome=out-frag rev=1 fp=%s\n' \
+    "$HOSTNAME_NOW" "$1" "0000000000000000000000000000000000000000000000000000000000000000" >> "$TARGET"
+  printf 'partial body, writer died here\n' >> "$TARGET"
+}
+add_fragment a
+SHA_PRE_REPLACE=$(sha_of "$TARGET")
+RECORDS_PRE_REPLACE=$(n_records)
+T10A=$(date +%s)
+env CREW_APPEND_TEST_FAIL_REPLACE=1 CREW_APPEND_LOCK_WAIT=6 sh "$SCRIPT" "$TMP/r5" "$TARGET" > "$TMP/replacefail.out" 2>&1; RC10=$?
+T10B=$(date +%s)
+assert_eq "3.10 failed atomic replace exits 74" "74" "$RC10"
+assert_bounded "3.10 failed replace returned within the bound" "$T10A" "$T10B" 6
+assert_eq "3.10 target byte-identical after the failed replace" "$SHA_PRE_REPLACE" "$(sha_of "$TARGET")"
+if [ -s "$TARGET" ]; then pass "3.10 target is never emptied"; else fail "3.10 target is never emptied"; fi
+assert_eq "3.10 committed records intact" "$RECORDS_PRE_REPLACE" "$(n_records)"
+TRUNC_KEPT=$(ls -1 "$TARGET".trunc.* 2>/dev/null | head -1)
+assert_file "3.10 the intact truncated copy survives" "${TRUNC_KEPT:-/nonexistent}"
+R10=$(ls -1t "$RECEIPTS"/crew-append-receipt-*.md 2>/dev/null | head -1)
+assert_file "3.10 failed replace left a receipt" "${R10:-/nonexistent}"
+if [ -n "${R10:-}" ] && [ -n "${TRUNC_KEPT:-}" ]; then
+  assert_contains "3.10 receipt names the surviving copy" "$R10" "$TRUNC_KEPT"
+  assert_contains "3.10 receipt says the target was not modified" "$R10" "The target was NOT modified"
+fi
+if [ -n "${TRUNC_KEPT:-}" ]; then
+  assert_eq "3.10 the surviving copy holds only complete records" \
+    "$RECORDS_PRE_REPLACE" "$(grep -c '^END fp=' "$TRUNC_KEPT" 2>/dev/null || true)"
+fi
+
+# ---------------------------------------------------------------- 3.11
+# kill -9 after the truncated copy is staged and fsynced but BEFORE the rename.
+# The target must still be the old, intact file — never empty, never partial.
+SHA_PRE_KILL=$(sha_of "$TARGET")
+CREW_APPEND_TEST_PAUSE_BEFORE_RENAME=1 sh "$SCRIPT" "$TMP/r5" "$TARGET" > "$TMP/prerename.out" 2>&1 &
+PRE=$!
+STRAY_PIDS="$STRAY_PIDS $PRE"
+if wait_until 8 'grep -q "rename not yet issued" "$TMP/prerename.out"'; then
+  pass "3.11 writer paused with the copy staged and the rename not issued"
+else
+  fail "3.11 writer paused with the copy staged and the rename not issued"
+fi
+kill -9 "$PRE" 2>/dev/null
+wait "$PRE" 2>/dev/null
+wait_until 5 '! kill -0 "$PRE" 2>/dev/null' || true
+if [ -s "$TARGET" ]; then pass "3.11 target still non-empty after the kill"; else fail "3.11 target still non-empty after the kill"; fi
+assert_eq "3.11 target byte-identical after the kill" "$SHA_PRE_KILL" "$(sha_of "$TARGET")"
+RECORDS_PRE_RECOVER=$(n_records)
+T11A=$(date +%s)
+env CREW_APPEND_LOCK_WAIT=6 sh "$SCRIPT" "$TMP/r5" "$TARGET" > "$TMP/prerename-recover.out" 2>&1; RC11=$?
+T11B=$(date +%s)
+assert_eq "3.11 next call recovers and exits 0" "0" "$RC11"
+assert_bounded "3.11 recovery returned within the bound" "$T11A" "$T11B" 6
+assert_contains "3.11 fragment quarantined on recovery" "$TMP/prerename-recover.out" "QUARANTINED incomplete fragment"
+assert_contains "3.11 record committed on recovery" "$TMP/prerename-recover.out" "APPENDED key=RECORD host=$HOSTNAME_NOW run=run-fff outcome=out-5 rev=1"
+if [ -s "$TARGET" ]; then pass "3.11 target never empty through the whole sequence"; else fail "3.11 target never empty through the whole sequence"; fi
+assert_eq "3.11 exactly one record committed" "1" "$(count_matches "$TARGET" "run=run-fff outcome=out-5 rev=1 fp=")"
+assert_eq "3.11 exactly one more complete record" "$((RECORDS_PRE_RECOVER + 1))" "$(n_records)"
+assert_eq "3.11 no fragment left in the target" "0" "$(count_matches "$TARGET" "outcome=out-frag")"
+assert_contains "3.11 fragment lives in the quarantine file" "$TARGET.quarantine" "outcome=out-frag"
+
 # ---------------------------------------------------------------- invariants
+# No test hook may have leaked into this shell (see the run_append note above).
+LEAKED=""
+for V in CREW_APPEND_TEST_FAIL_REPLACE CREW_APPEND_TEST_PAUSE_BEFORE_RENAME \
+         CREW_APPEND_TEST_PAUSE_AFTER_LOCK CREW_APPEND_TEST_PAUSE_MID_APPEND; do
+  eval "_v=\${$V:-}"
+  [ -z "$_v" ] || LEAKED="$LEAKED $V"
+done
+assert_eq "3.X no test hook leaked into the fixture shell" "" "$LEAKED"
+
+if [ -z "$(ls -1 "$TMP"/crew-performance.md.trunc.* 2>/dev/null)" ]; then
+  pass "3.X no orphaned truncated copies left behind"
+else
+  fail "3.X no orphaned truncated copies left behind"
+fi
 if [ -z "$(ls -1 "$TMP"/crew-performance.md.staging.* 2>/dev/null)" ]; then
   pass "3.X no staging files left behind"
 else

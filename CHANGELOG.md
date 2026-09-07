@@ -55,7 +55,7 @@ an independent review, three of them as amendments.
   their links, independent authorized work continues, and the run halts only when
   none remains. Renames, splits, re-seats, corrected tickets, and restarts never
   reset a count; a third ticket correction without a new observation counts as a
-  real failure. Hard rail 6's re-dispatch now defers to the recovery/park state.
+  real failure. Hard rail 5's re-dispatch now defers to the recovery/park state.
 - **Review rounds** — after two rounds the lead writes a per-finding disposition;
   a third round needs a named unresolved criterion, a finite question, and a
   stopping observation; there is no automatic fourth, and round exhaustion never
@@ -80,8 +80,8 @@ an independent review, three of them as amendments.
   when exposed); fifteen concurrent workers is a *reported* default ceiling, not
   a measured maximum; provider telemetry with missing raw values is recorded as
   `unavailable`; a launcher `CONTEXT ALERT` is an average-based routing warning,
-  never per-call billing proof; the rail-5 claim is narrowed to the common
-  unverified path.
+  never per-call billing proof; the rail-6 seat-provenance claim is narrowed to
+  the common unverified path.
 - **README** mirrors all of the above; the v0.3/v0.4 descriptions are kept and
   labelled as history rather than deleted.
 
@@ -97,13 +97,16 @@ an independent review, three of them as amendments.
   the relevant slice before a comparable dispatch; no cross-machine sync is
   assumed. The record refuses to conclude universal provider rankings, accuracy
   without a denominator, served identity from self-report, or savings from one
-  uncontrolled campaign.
+  uncontrolled campaign. Fragment recovery replaces the target by atomic rename
+  and keeps the intact copy on failure; lock reclaim uses process-table liveness,
+  not `kill -0` alone.
 - **Ledger sections** — `scripts/init-ledger.sh` now emits `## Current`
   (overwritten; parked questions and held write surfaces), a reservation section
   (a line before every dispatch, seat identity appended after, `LAUNCH UNKNOWN`
   reconciled before release), and a per-run crew record with run id, host, and
-  schema version. The atomic exclusive create and the exit-0 `EXISTS` behavior on
-  an existing ledger are preserved.
+  schema version, and it emits the `RUN:` line and the `## Recovery` section of
+  the ledger schema. The atomic exclusive create and the exit-0 `EXISTS` behavior
+  on an existing ledger are preserved.
 - **Probe output** — `scripts/probe.sh` reports Grok effort as "lead judgment per
   dispatch (no-evidence prior: highest supported)" instead of a fixed level.
 

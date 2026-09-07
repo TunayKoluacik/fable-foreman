@@ -220,7 +220,8 @@ reports argue the opposite. Do not overstate it.
 Judgment content decides the class (routing.md); this maps class to a first-choice
 seat once economics is allowed to choose among seats that already clear the bar.
 **The First Law is not suspended here:** if no listed seat clears the bar for a
-task, go up a tier or stop — never take the cheap row because it is cheap.
+task, go up a tier — or park that outcome as `NEEDS USER` and continue the ones
+that still have a qualified seat; never take the cheap row because it is cheap.
 **Effort in this table is never prescriptive** — effort is chosen per dispatch by
 the lead (Table 4 is the cost prior); this table places seats, nothing more.
 
@@ -231,7 +232,7 @@ the lead (Table 4 is the cost prior); this table places seats, nothing more.
 | Adversarial review / second opinion | FRONTIER-advisory | **Grok 4.6**, effort by lead judgment (Table 4 is the cost prior) | Codex sol | — |
 | Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.6**, effort by lead judgment (Table 4 is the cost prior), below the 200K cliff, when cost dominates; **terra** (Codex mid tier — the class table's Codex WORKHORSE seat) otherwise; step up to **sol** only when agentic-execution reliability dominates (First Law: unsure → one tier up) — the only measured head-to-head shows Grok trailing *sol* on DeepSWE and Terminal-Bench (Table 4b). No comparable execution measurement exists for Sonnet 5, whose only cross-model number here is the composite index (where Grok leads 61 to 55) — so do not pick Sonnet over Grok on reliability grounds this table cannot support. | Sonnet 5 / terra on pool grounds | — |
 | Large-context implementation (>200K) | WORKHORSE | **Sonnet 5** | terra | **Grok (cliff)**, Haiku (200K cap) |
-| Mechanical edits, extraction, scanning | FAST | **gpt-5.6-luna @ low** | Haiku 4.5 | frontier seats |
+| Mechanical edits, extraction, scanning | FAST | **gpt-5.6-luna**, effort by lead judgment (Table 4: mechanical work is where low effort is cheapest; a prior, not a rule) | Haiku 4.5 | frontier seats |
 | Repo-wide sweep (>500K) | any | Claude or Codex (1M ctx) | — | **Grok (500K ceiling)** |
 
 > **On "FRONTIER-advisory" — what that row does and does not grant.** The row
@@ -262,7 +263,10 @@ observable** on any provider, so nothing here allocates quota.
 **Use:** prefer an off-family seat for bulk implementation so the LEAD pool lasts.
 When a pool is *known* down, re-route the remainder and journal it. This never
 licenses a seat that does not clear the task's bar — a dead pool is a reason to
-stop and tell the user, not to accept weaker work (delegation.md, First Law).
+**park** the outcomes no remaining seat clears as `NEEDS USER`, with the evidence
+and a concrete question for the user, and to carry on with the outcomes that
+remaining seats do clear at the bar; never a reason to accept weaker work. The
+run halts only when nothing independent is left to do (delegation.md, First Law).
 
 ## Provenance of this table
 - Prices, context windows, cache discounts, effort mechanics: primary vendor docs, 2026-08-17.

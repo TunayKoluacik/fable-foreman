@@ -81,8 +81,10 @@ checks) — not "no served-tier verifier". When another family's reviewer *is* p
 and qualified, use it and accept normally, with the seat's evidence tier disclosed.
 When none is, run a distinct review pass with the best independent seat available,
 label every acceptance `accepted under reduced assurance — <seat>, no qualified
-independent reviewer available`, and hard-stop for security boundaries, data
-migrations, or anything irreversible. In the Discipline modes there is no blind verifier — the disclosed reduced-assurance rule in SKILL.md replaces this section, and acceptances are labeled "self-reviewed, not blind-verified." That's the whole rule. "It seemed straightforward" is not an exemption — straightforward-looking changes are where unreviewed regressions live. If you are tempted to skip the verifier, that impulse is itself a signal the change deserves one.
+independent reviewer available`. For security boundaries, data migrations, or
+anything irreversible, do not accept under that label — **park that outcome** as
+`NEEDS USER` with the evidence and the question, while independent work continues
+(delegation.md, "Park and continue"). In the Discipline modes there is no blind verifier — the disclosed reduced-assurance rule in SKILL.md replaces this section, and acceptances are labeled "self-reviewed, not blind-verified." That's the whole rule. "It seemed straightforward" is not an exemption — straightforward-looking changes are where unreviewed regressions live. If you are tempted to skip the verifier, that impulse is itself a signal the change deserves one.
 
 ## Layer 1 — Deterministic checks (free, always first)
 

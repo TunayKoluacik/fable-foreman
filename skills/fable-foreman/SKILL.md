@@ -27,7 +27,7 @@ You are the foreman: the lead model on the job site, which is exactly why you sh
 
 ## The First Law
 
-**Economics chooses among the models that clear the quality bar. It never lowers the bar.** When unsure whether a cheaper tier can do a task well, go one tier up. If budget or rate limits cannot support the tier a task demands, stop and tell the user — never silently ship degraded work.
+**Economics chooses among the models that clear the quality bar. It never lowers the bar.** When unsure whether a cheaper tier can do a task well, go one tier up. If budget or rate limits cannot support the tier a task demands, park that outcome as `NEEDS USER` with the evidence and a concrete question, keep working the outcomes a surviving seat still clears at their own bar, and halt only when nothing independent remains — never silently ship degraded work.
 
 ## Step 0 — Probe the job site (once per session, then cache — re-probe on model change)
 
@@ -100,12 +100,14 @@ ones UNVERIFIED, label every acceptance
 `accepted under reduced assurance — <seat>, no qualified independent reviewer available`,
 and journal it. The lead's own final verification is never waived by this rule. If
 the change is one the user would not want accepted on that basis — security
-boundaries, data migrations, anything irreversible — stop and say so instead.
+boundaries, data migrations, anything irreversible — park that outcome as `NEEDS USER`
+with the evidence and the question instead, and carry on with the independent work.
 
 If a present provider dies mid-run (quota exhausted, auth expired, rate limit),
 re-route the remainder to what remains and journal it — this is the degradation
-rule (delegation.md), and it never lowers the bar: if what remains cannot clear a
-task's bar, stop and say so rather than shipping weaker work.
+rule (delegation.md), and it never lowers the bar: what the remaining seats cannot
+clear is parked as `NEEDS USER` with its question, not shipped weaker — the rest of
+the run continues.
 
 In either Discipline mode, the blind-verifier requirement becomes a **disclosed reduced-assurance rule**: a distinct self-review pass against the original task, with every acceptance labeled "self-reviewed, not blind-verified" — never presented as verified.
 
@@ -121,7 +123,7 @@ In either Discipline mode, the blind-verifier requirement becomes a **disclosed 
 [references/routing.md](references/routing.md) (chosen per dispatch by the lead,
 from the levels the model and transport support) and acceptance by
 [references/verification.md](references/verification.md) (the lead accepts; a
-reviewer verdict alone is never acceptance; the lead accepts). No cell here fixes an effort level or
+reviewer verdict alone is never acceptance). No cell here fixes an effort level or
 bars a provider family from a role.
 
 **[references/model-matrix.md](references/model-matrix.md) is the evidence table** behind these placements — price, capability, context ceilings, effort payoff, and task-type mapping, each dated and sourced. Classes decide the tier; the matrix decides the seat within it. Use stable aliases, never dated model IDs. Codex tiers must be **verified against the account** (entitlement differs from documentation) — procedure in [references/routing.md](references/routing.md), including how to set effort per dispatch where the harness supports it. If the user names a model you don't recognize, check the provider's live docs before routing — never guess from training data.
@@ -185,7 +187,7 @@ is reported incomplete, not accepted. Full rule:
 - **Announce fan-outs** before they happen: crew size, seats, why.
 - **Batch fixes**: one fix worker per findings list, never one per finding.
 - Cheaper seats usually drain shared quota more slowly, and some plans meter them in larger buckets — but verify against the user's plan before promising headroom.
-- Under budget pressure: re-route remaining tasks; step a seat down **only** if the cheaper seat still clears that task's bar, and journal it. Otherwise stop cleanly and say why.
+- Under budget pressure: re-route remaining tasks; step a seat down **only** if the cheaper seat still clears that task's bar, and journal it. Otherwise park that task as `NEEDS USER` with the reason and the question, continue the work that remaining seats clear, and halt only when no independent authorized work is left (delegation.md, the degradation rule).
 - **Codex under user opt-in:** when the probe reports `codex billing: PRE-APPROVED (user config)` (Step 0 item 4), the step-down rule above does not apply to Codex — journal Codex usage as normal but treat it as unconstrained unless the user caps that run. Without the flag, ordinary discipline applies to Codex too.
 - **Grok under user opt-in:** when the probe reports `grok billing: PRE-APPROVED (user config)` (Step 0 item 5), the step-down rule does not apply to Grok either; route `grok-4.6` with **effort chosen per dispatch by the lead** (routing.md), fan out to the ceiling (default 15 — a reported successful concurrency default, not a measured maximum), and journal each dispatch. The **200K point is a price boundary**, not a correctness one: Grok reprices the whole request above it, so route around the surcharge rather than absorbing it, and do not assert which alternative is cheaper without evidence. **500K is the hard ceiling** — above it Grok is ineligible outright (routing.md, model-matrix.md Table 3).
 ## Durable state

@@ -11,7 +11,7 @@ The session model is the **LEAD seat** — it runs you, the foreman. Do not assu
 **The seat can change under you.** Claude Code may move a session to a different model mid-run — safety-classifier fallback (which can also pin the session to the new model for its remainder), quota exhaustion, org policy, or the user typing `/model`. Treat the Step 0 probe as cache with an invalidation rule, not a one-time fact. On any signal the identity moved, re-probe and write one ledger line: `LEAD seat changed: <old class> → <new class> — <trigger>`. Then:
 
 - **Frontier → frontier** (e.g. a fallback between top-tier families): nothing to re-plan. Finish the run; in-flight tickets stay valid, because tickets are written against classes.
-- **Frontier → mid-tier** (a real downgrade): stop before the next FRONTIER-class dispatch, tell the user the seat dropped, and let them choose — restore the seat, re-route that work to a frontier subagent, or accept a documented reduction. Never quietly keep making frontier-class calls from a mid-tier seat.
+- **Frontier → mid-tier** (a real downgrade): stop before the next FRONTIER-class dispatch, tell the user the seat dropped, and let them choose — restore the seat, re-route that work to a frontier subagent, or accept a documented reduction. This is a genuine run-level halt only if *everything* left is frontier-class work: park the frontier outcomes as `NEEDS USER` with the question and keep running the independent non-frontier work a surviving seat clears. Never quietly keep making frontier-class calls from a mid-tier seat.
 
 **A mid-tier LEAD cannot hold the acceptance judgment.** Acceptance is a
 frontier-class judgment: reconciling the original requirements against the evidence,
@@ -20,7 +20,8 @@ adjudicating consequential findings, and personally checking the critical behavi
 below and an acceptance decision is due, either **pin a frontier-qualified seat to
 make that judgment** — a frontier subagent verifier holding the original task
 verbatim, the candidate, and the evidence, whose conclusion the mid-tier lead records
-rather than overrides — or **stop** and tell the user, per the downgrade rule above.
+rather than overrides — or **park that outcome** as `NEEDS USER` with the question,
+per the downgrade rule above, while independent work continues.
 This is scoped to the *acceptance judgment*: routine verifiers, scouts, and fix
 reviewers do not all become frontier, and no provider family is excluded from
 supplying that seat when it is qualified.
