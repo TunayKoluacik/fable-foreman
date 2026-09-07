@@ -20,6 +20,9 @@
 #        byte-identical, the intact copy survives and is named in the receipt
 #   3.11 kill -9 after the truncated copy is staged but BEFORE the rename ->
 #        target still intact (never empty); next call recovers and commits one
+#   3.12 the REAL `mv -f` publish step fails, with NO test hook: an ACL denying
+#        `delete` on the target makes rename(2) return EACCES while the file
+#        stays writable, so the genuine failure branch is exercised
 #
 # Every lock-path case also asserts a bounded return time.
 #
@@ -340,6 +343,74 @@ assert_eq "3.11 exactly one record committed" "1" "$(count_matches "$TARGET" "ru
 assert_eq "3.11 exactly one more complete record" "$((RECORDS_PRE_RECOVER + 1))" "$(n_records)"
 assert_eq "3.11 no fragment left in the target" "0" "$(count_matches "$TARGET" "outcome=out-frag")"
 assert_contains "3.11 fragment lives in the quarantine file" "$TARGET.quarantine" "outcome=out-frag"
+
+# ---------------------------------------------------------------- 3.12
+# 3.10 forces the failure branch with a hook. This case exercises the REAL
+# `mv -f` failure with no hook at all.
+#
+# Why an ACL and not chmod: rename(2) needs write permission on the DIRECTORY,
+# so chmod 555 on the directory would make the script fail earlier (it could not
+# write the quarantine file or the truncated copy) and would never reach the
+# rename. `chflags uchg` on the target makes `test -w` false, so the script
+# stops at its "target not writable" check instead. An ACL denying `delete` on
+# the target leaves the file writable and the directory writable — the
+# quarantine append and the truncated copy both succeed — and only the rename,
+# which must unlink the old target, is refused. That is the branch under test.
+FX312_READY=no
+if command -v chmod >/dev/null 2>&1 && chmod +a "$(id -un) deny delete" "$TARGET" 2>/dev/null; then
+  if [ -w "$TARGET" ]; then FX312_READY=yes; else chmod -a# 0 "$TARGET" 2>/dev/null; fi
+fi
+
+if [ "$FX312_READY" != "yes" ]; then
+  # Deliberately not the string "SKIP " at line start: run-all.sh reads that as
+  # a whole-fixture skip.
+  printf 'NOTE  3.12 not run — this platform does not support an ACL denying delete
+'
+else
+  add_fragment b
+  SHA_PRE_MV=$(sha_of "$TARGET")
+  RECORDS_PRE_MV=$(n_records)
+  QUAR_PRE_MV=0
+  [ -f "$TARGET.quarantine" ] && QUAR_PRE_MV=$(wc -c < "$TARGET.quarantine" | tr -d ' ')
+  mkrec "$TMP/r6" run-ggg out-6 1 "sixth closure"
+  T12A=$(date +%s)
+  env CREW_APPEND_LOCK_WAIT=6 sh "$SCRIPT" "$TMP/r6" "$TARGET" > "$TMP/mvfail.out" 2>&1; RC12=$?
+  T12B=$(date +%s)
+  assert_eq "3.12 real mv failure exits 74" "74" "$RC12"
+  assert_bounded "3.12 real mv failure returned within the bound" "$T12A" "$T12B" 6
+  assert_absent "3.12 no test hook was used" "$TMP/mvfail.out" "TEST-HOOK"
+  assert_contains "3.12 the publish step is what failed" "$TMP/mvfail.out" "could not publish the truncated copy"
+  assert_eq "3.12 target byte-identical after the failed mv" "$SHA_PRE_MV" "$(sha_of "$TARGET")"
+  if [ -s "$TARGET" ]; then pass "3.12 target is never emptied"; else fail "3.12 target is never emptied"; fi
+  assert_eq "3.12 committed records intact" "$RECORDS_PRE_MV" "$(n_records)"
+  assert_eq "3.12 the incoming record was NOT committed" "0" "$(count_matches "$TARGET" "run=run-ggg outcome=out-6 rev=1 fp=")"
+  MV_TRUNC=$(ls -1 "$TARGET".trunc.* 2>/dev/null | head -1)
+  assert_file "3.12 the intact truncated copy survives" "${MV_TRUNC:-/nonexistent}"
+  R12=$(ls -1t "$RECEIPTS"/crew-append-receipt-*.md 2>/dev/null | head -1)
+  assert_file "3.12 real mv failure left a receipt" "${R12:-/nonexistent}"
+  if [ -n "${R12:-}" ] && [ -n "${MV_TRUNC:-}" ]; then
+    assert_contains "3.12 receipt names the surviving copy" "$R12" "$MV_TRUNC"
+    assert_contains "3.12 receipt says the target was not modified" "$R12" "The target was NOT modified"
+  fi
+  if [ -n "${MV_TRUNC:-}" ]; then
+    assert_eq "3.12 the surviving copy holds only complete records" \
+      "$RECORDS_PRE_MV" "$(grep -c '^END fp=' "$MV_TRUNC" 2>/dev/null || true)"
+  fi
+  QUAR_POST_MV=$(wc -c < "$TARGET.quarantine" | tr -d ' ')
+  if [ "$QUAR_POST_MV" -gt "$QUAR_PRE_MV" ]; then
+    pass "3.12 the fragment reached the quarantine file before the failure"
+  else
+    fail "3.12 the fragment reached the quarantine file before the failure"
+  fi
+
+  # Drop the ACL, then prove the very same call succeeds once the cause is gone.
+  chmod -a# 0 "$TARGET" 2>/dev/null
+  rm -f "$TARGET".trunc.*
+  env CREW_APPEND_LOCK_WAIT=6 sh "$SCRIPT" "$TMP/r6" "$TARGET" > "$TMP/mvfail-retry.out" 2>&1; RC12B=$?
+  assert_eq "3.12 retry after the cause is fixed exits 0" "0" "$RC12B"
+  assert_eq "3.12 retry commits exactly one record" "1" "$(count_matches "$TARGET" "run=run-ggg outcome=out-6 rev=1 fp=")"
+  assert_eq "3.12 no fragment left in the target" "0" "$(count_matches "$TARGET" "outcome=out-frag")"
+fi
 
 # ---------------------------------------------------------------- invariants
 # No test hook may have leaked into this shell (see the run_append note above).

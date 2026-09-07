@@ -141,10 +141,10 @@ of the bill — the expensive half on every seat in Table 1.
 not on difficulty alone.** Anthropic publishes the only quantified curve (PRIMARY,
 2026-08-17), and the two shapes diverge sharply:
 
-| Task shape | Accuracy-vs-effort curve | What to do |
+| Task shape | Accuracy-vs-effort curve | Cost prior (the lead's judgment and the performance record override this) |
 |---|---|---|
-| Analysis / knowledge work / review (WideSearch, GDPval, BrowseComp) | **nearly flat** — `low` gives up only 1-3 points for 33-50% less cost; `medium` matches `high` at 70-85% of cost | **default `medium`**; top effort is usually wasted money |
-| Long-horizon coding (SWE-bench Pro) | **steep** — `low` gives up ~8 points | **default `high`**; do not economize here |
+| Analysis / knowledge work / review (WideSearch, GDPval, BrowseComp) | **nearly flat** — `low` gives up only 1-3 points for 33-50% less cost; `medium` matches `high` at 70-85% of cost | `medium` has matched `high` at 70-85% of cost on these benchmarks; a prior for review-shaped work, not a default |
+| Long-horizon coding (SWE-bench Pro) | **steep** — `low` gives up ~8 points | `low` gave up ~8 points here; the prior favors higher effort for long-horizon coding |
 
 Anthropic's own framing: "Long-horizon coding is the other shape." Treat this as
 measured on Anthropic models; the shape is a strong prior for other families, not

@@ -13,18 +13,27 @@ The session model is the **LEAD seat** — it runs you, the foreman. Do not assu
 - **Frontier → frontier** (e.g. a fallback between top-tier families): nothing to re-plan. Finish the run; in-flight tickets stay valid, because tickets are written against classes.
 - **Frontier → mid-tier** (a real downgrade): stop before the next FRONTIER-class dispatch, tell the user the seat dropped, and let them choose — restore the seat, re-route that work to a frontier subagent, or accept a documented reduction. This is a genuine run-level halt only if *everything* left is frontier-class work: park the frontier outcomes as `NEEDS USER` with the question and keep running the independent non-frontier work a surviving seat clears. Never quietly keep making frontier-class calls from a mid-tier seat.
 
-**A mid-tier LEAD cannot hold the acceptance judgment.** Acceptance is a
-frontier-class judgment: reconciling the original requirements against the evidence,
-adjudicating consequential findings, and personally checking the critical behavior
-(verification.md, "Personal final verification"). When the LEAD seat is mid-tier or
-below and an acceptance decision is due, either **pin a frontier-qualified seat to
-make that judgment** — a frontier subagent verifier holding the original task
-verbatim, the candidate, and the evidence, whose conclusion the mid-tier lead records
-rather than overrides — or **park that outcome** as `NEEDS USER` with the question,
-per the downgrade rule above, while independent work continues.
-This is scoped to the *acceptance judgment*: routine verifiers, scouts, and fix
+**A mid-tier LEAD still accepts — but never on its own frontier-class judgment.**
+The acceptance *act* is always the lead's, at every seat class: inspect the actual
+candidate, reconcile the original requirements to the evidence, adjudicate the
+consequential findings, personally check the critical behavior, and report incomplete
+where a required observation cannot be made (verification.md, "Personal final
+verification"). No reviewer's verdict is ever the acceptance decision, and a
+frontier-qualified reviewer is not an exception to that.
+
+What a mid-tier lead must not do is **substitute its own judgment for frontier-class
+judgment on a frontier-class question** — an architecture call, an ambiguous defect,
+a subtle correctness or security argument. On such a question it **obtains a
+frontier-qualified seat's evidence** first: a pinned frontier verifier or frontier
+subagent holding the original task verbatim, the candidate, and the evidence. The
+lead then does the acceptance work against that evidence like any other. Where its
+own reading would **disagree** with the frontier evidence, it neither overrides it
+nor rubber-stamps it: **park the outcome** as `NEEDS USER` carrying both readings and
+a concrete question, per the downgrade rule above, while independent work continues.
+
+This is scoped to *frontier-class questions*: routine verifiers, scouts, and fix
 reviewers do not all become frontier, and no provider family is excluded from
-supplying that seat when it is qualified.
+supplying the frontier-qualified seat when it is qualified.
 
 ## Claude seats
 

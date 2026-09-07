@@ -3,10 +3,15 @@
 #
 #   sh skills/fable-foreman/tests/run-all.sh
 #
-# Runs fixtures 1, 2, 3 and 5 of the v0.5 implementation contract and prints one
-# PASS/FAIL line per case, then a per-fixture and overall summary. Exits 0 only
-# if every case passed. (Fixture 4, the Grok launcher runtime check, is not here:
-# it dispatches a real billable worker and is run by hand.)
+# Runs fixtures 1, 2, 3, 4 and 5 of the v0.5 implementation contract and prints
+# one PASS/FAIL line per case, then a per-fixture and overall summary. Exits 0
+# only if every case passed.
+#
+# Fixture 4 (the Grok reviewer-to-fixer runtime check) is opt-in: it makes real,
+# billable Grok calls (~$0.01), so it SKIPS itself and exits 0 unless
+# FOREMAN_LIVE_GROK=1 is set and the grok CLI is logged in. The observed run it
+# reproduces — and the cross-profile resume refusal that grok-workers.md:146
+# states as settled — is recorded in tests/evidence/fixture-4-2026-09-07.md.
 #
 # SAFETY: every fixture works inside its own `mktemp -d` and must never reach
 # the real global state. This runner refuses to start if $FOREMAN_HOME or the
@@ -55,13 +60,23 @@ snapshot_real() {
 BEFORE_SNAP=$(snapshot_real)
 
 # ------------------------------------------------------------------------------
-FIXTURES="fixture-1-init-ledger.sh fixture-2-probe.sh fixture-3-crew-append.sh fixture-5-precedence.sh"
+FIXTURES="fixture-1-init-ledger.sh fixture-2-probe.sh fixture-3-crew-append.sh fixture-4-grok-transition.sh fixture-5-precedence.sh"
 TOTAL_FAIL=0
 SUMMARY=""
 
+RUNTMP=$(mktemp -d "${TMPDIR:-/tmp}/foreman-runall.XXXXXX") || exit 1
+trap 'rm -rf "$RUNTMP"' EXIT INT TERM
+SKIPPED=0
+
 for F in $FIXTURES; do
   printf '\n===== %s =====\n' "$F"
-  if sh "$HERE/$F"; then
+  if sh "$HERE/$F" > "$RUNTMP/out" 2>&1; then RC=0; else RC=1; fi
+  cat "$RUNTMP/out"
+  if [ "$RC" = "0" ] && grep -q '^SKIP ' "$RUNTMP/out"; then
+    SUMMARY="$SUMMARY
+  SKIPPED  $F  ($(grep -m1 '^SKIP ' "$RUNTMP/out"))"
+    SKIPPED=$((SKIPPED + 1))
+  elif [ "$RC" = "0" ]; then
     SUMMARY="$SUMMARY
   PASS  $F"
   else
@@ -83,7 +98,11 @@ fi
 
 printf '\n===== summary =====%s\n' "$SUMMARY"
 if [ "$TOTAL_FAIL" = "0" ]; then
-  printf 'ALL FIXTURES PASSED (1, 2, 3, 5)\n'
+  if [ "$SKIPPED" = "0" ]; then
+    printf 'ALL FIXTURES PASSED (1, 2, 3, 4, 5)\n'
+  else
+    printf 'ALL RUN FIXTURES PASSED; %s skipped (see the SKIPPED line above)\n' "$SKIPPED"
+  fi
   exit 0
 fi
 printf '%s FIXTURE(S) FAILED\n' "$TOTAL_FAIL"

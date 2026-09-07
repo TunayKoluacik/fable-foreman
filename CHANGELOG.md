@@ -56,6 +56,9 @@ an independent review, three of them as amendments.
   none remains. Renames, splits, re-seats, corrected tickets, and restarts never
   reset a count; a third ticket correction without a new observation counts as a
   real failure. Hard rail 5's re-dispatch now defers to the recovery/park state.
+- **Hard rails renumbered 1-6 in list order** — collect-or-LOST is now rail 5 and
+  seat provenance rail 6. Older entries below cite the pre-0.5 numbering and are
+  left as written.
 - **Review rounds** — after two rounds the lead writes a per-finding disposition;
   a third round needs a named unresolved criterion, a finite question, and a
   stopping observation; there is no automatic fourth, and round exhaustion never
