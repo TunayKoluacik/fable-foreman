@@ -63,7 +63,7 @@ Both copies are required. The skill calls `foreman-scout`, `foreman-worker`, `fo
 
 **Will it reduce my AI costs?** It is designed to spend effort where it helps: capable lower-cost workers for suitable tasks, focused review, and fewer repeated handoffs. Actual cost depends on the work, models, and repairs. Savings are not guaranteed.
 
-**Does the skill include AI usage?** No. Your existing Claude, Codex, or Grok accounts provide the models and cover their usage. Before the first billable Codex dispatch, the skill confirms routing unless you already authorized Codex in the session or configured your own standing approval. Grok usage follows the skill's ordinary budget discipline. Read the [provider setup and consent details](skills/fable-foreman/SKILL.md#step-0--probe-the-job-site-once-per-session-then-cache--re-probe-on-model-change).
+**Does the skill include AI usage?** No. Your existing Claude, Codex, or Grok accounts provide the models and cover their usage. Before the first billable Codex or Grok dispatch, the skill asks for authorization unless you already authorized that provider in the session or configured your own optional standing pre-approval. Read the [provider setup and consent details](skills/fable-foreman/SKILL.md#step-0--probe-the-job-site-once-per-session-then-cache--re-probe-on-model-change).
 
 **Do I have to manage the workers myself?** No. The lead handles assignments, progress checks, review, and routine repairs within your instructions. It brings you decisions that need your input and keeps independent work moving.
 

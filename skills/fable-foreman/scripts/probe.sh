@@ -37,6 +37,12 @@ if [ "${FOREMAN_CODEX_PREAPPROVED:-}" = "1" ] || [ -f "${FOREMAN_HOME:-$HOME/.fo
 else
   echo "codex billing: consent rule applies — confirm with the user before the first billable Codex call (unless they asked for Codex this session)"
 fi
+# Grok standing pre-approval — same shape as Codex's, user-set only (2026-09-04).
+# The flag file may hold a line "parallel: N" naming the fan-out ceiling (default 15).
+if [ "${FOREMAN_GROK_PREAPPROVED:-}" = "1" ] || [ -f "${FOREMAN_HOME:-$HOME/.foreman}/grok-preapproved" ]; then
+  GROK_PAR=$(grep -E '^parallel: *[0-9]+' "${FOREMAN_HOME:-$HOME/.foreman}/grok-preapproved" 2>/dev/null | head -1 | grep -oE '[0-9]+' || true)
+  echo "grok billing: PRE-APPROVED (user config) — consent ask skipped, budget step-down does not apply to Grok; grok effort: lead judgment per dispatch (no-evidence prior: highest supported); parallel ceiling ${GROK_PAR:-15} (reported default, not a measured maximum)"
+fi
 
 # Grok CLI (xAI). Binary is normally at $HOME/.grok/bin/grok and may or may
 # not also be on PATH; $GROK_HOME (default ~/.grok) governs where its config

@@ -1,5 +1,132 @@
 # Changelog
 
+## 0.5.0 — 2026-09-07
+
+The "policy reconciliation" release. Every rule that let a provider family, a
+billing tier, or a fixed effort level stand in for a judgment is replaced by the
+judgment itself: the lead accepts, reviewers supply evidence, and seats are
+qualified by what they can actually do. Recovery becomes outcome-bound and parks
+instead of halting, and the crew starts keeping a performance record. Written
+against an adjudicated implementation contract that resolved nine findings from
+an independent review, three of them as amendments.
+
+### Changed
+- **Acceptance and reviewer qualification** (SKILL.md, `references/verification.md`,
+  `references/model-matrix.md`, `agents/foreman-verifier.md`, README) — the lead
+  accepts; a reviewer verdict supplies evidence, never acceptance; a reviewer
+  verdict alone is never acceptance proof. Reviewer qualification is model +
+  transport + allowed tools + assigned checks. Every required deterministic
+  observation names its executor: a no-shell reviewer reasons over the candidate
+  and the check artifacts while the lead or a designated capable executor runs
+  the candidate-bound checks, and an unrun check stays UNVERIFIED. The Claude
+  reviewer stays the *default* evidence seat, described honestly as
+  contract-plus-detection (a no-edit tool contract plus a mutation backstop),
+  not a sandbox.
+- **Family bars removed** — all three families are eligible for any role when
+  qualified. The "never the accepting verdict" and "advisory only" clauses that
+  barred Grok, and the billed-tier authority bar, are replaced by *disclosure*:
+  seat-evidence tier is recorded and weighed, never used to disqualify. Grok's
+  sandbox protections and the citation-verification rule are unchanged.
+- **Effort by lead judgment** (`references/routing.md`, `references/model-matrix.md`,
+  `references/grok-workers.md`, `references/codex-workers.md`, SKILL.md) — fixed
+  `xhigh`/`medium`/`high` prescriptions are gone from the role table, Table 5, and
+  the worker references. Effort is chosen per dispatch by the lead, with the
+  highest supported level as the no-evidence prior for Grok and the performance
+  record as the evidence that revises it; discretion applies only where model and
+  transport support it. The CursorBench effort tradeoff stays as a dated,
+  SECONDARY prior with unproved cross-family transfer.
+- **Personal final verification** (SKILL.md, `references/verification.md`) —
+  independent reviewers supply evidence and challenge; their PASS does not
+  transfer acceptance responsibility from the lead, who inspects the actual
+  candidate, reconciles original requirements to evidence, adjudicates
+  consequential findings, and personally checks critical behavior, material gaps,
+  and disputed claims. A required observation that cannot be made is reported
+  incomplete.
+- **Behavior-test review trigger** — the "single-file, no logic content" review
+  exemption is replaced by a behavior test: a change that cannot alter behavior
+  may skip independent review; anything that can may not.
+- **Outcome-bound recovery with park-and-continue** (`references/delegation.md`) —
+  four separate counts keyed on outcome id (delivery attempts, fix waves, review
+  rounds, recovery 0 or 1), evaluated guards-first: authority and ownership,
+  then outcome state, then original-outcome limits, then failure attribution.
+  Two failed fix waves buy exactly one reserved, diagnosed, changed recovery; a
+  failed recovery parks the outcome as `NEEDS USER` with evidence, missing
+  criterion, concrete question, and resume condition. Dependents are parked with
+  their links, independent authorized work continues, and the run halts only when
+  none remains. Renames, splits, re-seats, corrected tickets, and restarts never
+  reset a count; a third ticket correction without a new observation counts as a
+  real failure. Hard rail 5's re-dispatch now defers to the recovery/park state.
+- **Hard rails renumbered 1-6 in list order** — collect-or-LOST is now rail 5 and
+  seat provenance rail 6. Older entries below cite the pre-0.5 numbering and are
+  left as written.
+- **Review rounds** — after two rounds the lead writes a per-finding disposition;
+  a third round needs a named unresolved criterion, a finite question, and a
+  stopping observation; there is no automatic fourth, and round exhaustion never
+  creates acceptance.
+- **Builder ownership and role transitions** (`references/delegation.md`,
+  `references/verification.md`) — the builder makes the WIP commit on the working
+  branch and reports the hash; the lead checks clean tree and HEAD. Same builder
+  first when resumable (Claude via harness continuation, Grok via launcher
+  resume); Codex fresh dispatch is replacement with preserved contract, findings,
+  and evidence. A reviewer never changes the candidate it is judging within the
+  same assignment; a role change is an explicit journaled writable dispatch, the
+  earlier verdict does not cover the new edits, affected checks are re-run, and a
+  different fresh context assesses the repaired revision.
+- **Plan-stage different-family challenge** — a substantial plan gets an
+  off-family challenge that replaces the planned *architecture* review only.
+  Candidate-specific post-build assurance is still required; a duplicate
+  off-family post-build read may be omitted only with a written risk rationale.
+- **Mid-tier lead** (`references/routing.md`) — when the lead is mid-tier the
+  acceptance judgment must be frontier-qualified: pin a frontier seat for it or
+  stop. Routine reviewers are not all promoted to frontier.
+- **Factual claims corrected** — cache reuse is not guaranteed (record telemetry
+  when exposed); fifteen concurrent workers is a *reported* default ceiling, not
+  a measured maximum; provider telemetry with missing raw values is recorded as
+  `unavailable`; a launcher `CONTEXT ALERT` is an average-based routing warning,
+  never per-call billing proof; the rail-6 seat-provenance claim is narrowed to
+  the common unverified path.
+- **README** now gives a concise product overview and links to the skill,
+  verification guidance, routing guidance, and this release history for the
+  implementation details.
+
+### Added
+- **A user-authorized global performance record** at `~/.foreman/crew-performance.md`
+  with `scripts/crew-append.sh` — one self-delimited record per closed outcome
+  (record key of host, run id, outcome id, closure revision, plus a content
+  fingerprint and matching end-marker), bounded lock acquisition with a local
+  receipt instead of an indefinite block, stale-lock reclaim only for a provably
+  dead same-host owner, staged and fsynced appends with trailing-fragment
+  quarantine, no-op on identical duplicates and a conflict exit on a same-key
+  different-content record, and corrections appended as new rows. The lead reads
+  the relevant slice before a comparable dispatch; no cross-machine sync is
+  assumed. The record refuses to conclude universal provider rankings, accuracy
+  without a denominator, served identity from self-report, or savings from one
+  uncontrolled campaign. Fragment recovery replaces the target by atomic rename
+  and keeps the intact copy on failure; lock reclaim uses process-table liveness,
+  not `kill -0` alone.
+- **Ledger sections** — `scripts/init-ledger.sh` now emits `## Current`
+  (overwritten; parked questions and held write surfaces), a reservation section
+  (a line before every dispatch, seat identity appended after, `LAUNCH UNKNOWN`
+  reconciled before release), and a per-run crew record with run id, host, and
+  schema version, and it emits the `RUN:` line and the `## Recovery` section of
+  the ledger schema. The atomic exclusive create and the exit-0 `EXISTS` behavior
+  on an existing ledger are preserved.
+- **Probe output** — `scripts/probe.sh` reports Grok effort as "lead judgment per
+  dispatch (no-evidence prior: highest supported)" instead of a fixed level.
+
+### Deliberately NOT changed
+- **The launchers.** `scripts/grok-dispatch.sh` and `scripts/codex-dispatch.sh`
+  are untouched in this release, sandbox profiles and all.
+- **Grok's sandbox and the citation contract.** Removing the family bar does not
+  relax either.
+- **The First Law**, the 3x expected-runtime worker timeout, and the ledger's
+  append-only discipline.
+
+### Known follow-up (not in this release)
+- `scripts/grok-dispatch.sh:236` still prints "every call was repriced" where it
+  means "the average exceeded 200K; individual calls may or may not have been
+  repriced." Corrected in a separate ticket so the launchers stay untouched here.
+
 ## 0.4.0 — 2026-08-18
 
 The "know what a seat costs" release. Adds xAI Grok as a third worker provider,
