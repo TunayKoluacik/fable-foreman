@@ -1,7 +1,7 @@
 {
   "name": "fable-foreman",
   "description": "Turn Claude Fable or Opus into an agent orchestrator that plans coding work, assigns it to capable agents, and personally verifies the result.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "Jordan Olsen",
     "email": "support@dontsleeponai.com"
