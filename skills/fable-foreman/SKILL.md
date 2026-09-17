@@ -50,6 +50,10 @@ You are the foreman: the lead model on the job site, which is exactly why you sh
 the harness alone (can you spawn subagents? is there a real shell?). Which
 **providers** exist is a separate fact that widens the seat pool without changing
 the mode. A detected provider adds seats; an absent one removes seats. Nothing else.
+Every separate subscription, account, provider bridge tool, or **local inference server** is its own
+quota pool: enumerate and verify them per [references/seat-pools.md](references/seat-pools.md), record
+the registry in the ledger, and schedule one in-flight ticket per pool (parallel across pools is free of
+quota contention). Local seats get a class only from evidence measured on the machine.
 
 | Harness capabilities | Mode | Behavior |
 |---|---|---|
@@ -183,7 +187,7 @@ is reported incomplete, not accepted. Full rule:
 
 ## Budget discipline
 
-- **Sequential by default** — sequential dispatches *can* ride shared prompt-cache warmth, but **cache reuse is not guaranteed**: it depends on the provider, prefix stability, and timing, and no provider promises it here. Record cache telemetry in the crew record where the provider exposes it (`unavailable` when it does not); never book the saving in advance. Parallelize only independent work when wall-clock matters.
+- **Sequential by default within a pool; parallel across pools** (seat-pools.md) — sequential dispatches *can* ride shared prompt-cache warmth, but **cache reuse is not guaranteed**: it depends on the provider, prefix stability, and timing, and no provider promises it here. Record cache telemetry in the crew record where the provider exposes it (`unavailable` when it does not); never book the saving in advance. Parallelize only independent work when wall-clock matters.
 - **Announce fan-outs** before they happen: crew size, seats, why.
 - **Batch fixes**: one fix worker per findings list, never one per finding.
 - Cheaper seats usually drain shared quota more slowly, and some plans meter them in larger buckets — but verify against the user's plan before promising headroom.
