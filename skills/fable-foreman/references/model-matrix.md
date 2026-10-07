@@ -48,7 +48,7 @@ list price hides.
 | GPT-6 Sol | 2 | 10 | 0.20 | 272K (872K max) | 48† | 57 | n/m | Codex **workhorse** tier — the name moved class (see note); >272K: $4/$15 |
 | Grok 4.7 | 2 | 6 | 0.50 | 500K | 46 (xhigh) | 56 | **81K** (xhigh) | DeepSWE 73%, Terminal-Bench 4.0 33%; **2x whole request ≥200K** |
 | Grok 4.6 | 2 | 6 | 0.50 | 500K | 44 (high) | 47 | 38K (xhigh) | same price as 4.7, half the output volume; same 200K cliff |
-| Claude Sonnet 5 | 2 | 10 | 0.20 | 1M | n/m | n/m | n/m | $2/$10 now permanent; no length surcharge |
+| Claude Sonnet 5.5 | 2 | 10 | 0.20 | 1M | n/m | n/m | n/m | $2/$10 now permanent; no length surcharge; succeeds Sonnet 5 at the same price, context and tokenizer (as of 2026-10-07 — verify in your version); effort levels recalibrated, so per-task figures carried over from Sonnet 5 are unverified |
 | GPT-6 Luna | **0.10** | **0.50** | 0.01 | 272K (872K max) | 37† | 41 | n/m | Codex FAST tier; >272K: $0.20/$0.75 |
 | Claude Haiku 4.5 | 1 | 5 | 0.10 | **200K** | n/m | n/m | n/m | 4096-token cache floor |
 | Grok 4.7 Fast (`grok-4.7-build-fast`) | 4 | 12 | 1.00 | 500K | — | — | — | same weights class as 4.7, **2x price** for speed; Grok Build/Cursor only |
@@ -82,7 +82,7 @@ work — but **output volume differs by model** (Table 1, "Out tok/task"), so th
 | GPT-6 Luna | **$0.019** | 37† | 41 | ~10x cheaper than Haiku, far more capable |
 | Claude Haiku 4.5 | $0.190 | n/m | n/m | FAST fallback when Codex is absent |
 | GPT-6 Sol | $0.380 | 48† | 57 | workhorse value on the Codex side |
-| Claude Sonnet 5 | $0.380 | n/m | n/m | workhorse on the lead's own pool |
+| Claude Sonnet 5.5 | $0.380 | n/m | n/m | workhorse on the lead's own pool |
 | Grok 4.7 / 4.6 | $0.422 | 46 / 44 | 56 / 47 | same list price; 4.7 emits ~2x the output on hard tasks |
 | Claude Opus 5.5 | $0.700 | **58** | n/m | frontier at a workhorse-adjacent price |
 | Grok 4.7 Fast | $0.844 | — | — | pay 2x only for wall-clock |
@@ -91,7 +91,7 @@ work — but **output volume differs by model** (Table 1, "Out tok/task"), so th
 
 Anthropic charges a cache-write premium on the fresh pass (Opus 5.5 $5/M, Fable 5.1
 $12.50/M for 5-minute TTL; verified 2026-09-23): Opus 5.5 $0.80, Fable 5.1 $1.93,
-Sonnet 5 $0.43, Haiku $0.215. Treat the table as ±20% (tokenizers differ across
+Sonnet 5.5 $0.43, Haiku $0.215. Treat the table as ±20% (tokenizers differ across
 vendors).
 
 **Per-task reality check — output volume × output price** at the measured effort
@@ -128,7 +128,7 @@ Five conclusions that should drive routing:
 Grok reprices the **entire request** at 2x once it crosses 200K, so cost jumps
 discontinuously. Same job, 17% more input:
 
-| Job | Grok 4.7 / 4.6 | Sonnet 5 | Verdict |
+| Job | Grok 4.7 / 4.6 | Sonnet 5.5 | Verdict |
 |---|---|---|---|
 | 180K in / 15K out | **$0.450** | $0.510 | Grok wins |
 | 210K in / 15K out | $1.020 | **$0.570** | Sonnet 44% cheaper (Grok costs 1.79x) |
@@ -260,8 +260,8 @@ the lead (Table 4 is the cost prior); this table places seats, nothing more.
 | Accepting verdict on a change (blind verifier) | FRONTIER | **Claude verifier** — the default evidence seat; **the lead accepts**. A **Grok 4.6 or GPT-6 Sol read-only reviewer** is the cross-family *second opinion*; GPT-6 Astra is stronger but premium (double approval) | any qualified reviewer (model + transport + allowed tools + assigned checks, with a named executor for every required deterministic check) may give a scoped verdict, its evidence tier disclosed | **a reviewer verdict alone as acceptance proof** |
 | Adversarial review / second opinion | FRONTIER-advisory | **Grok 4.6** (output-light, lowest volume), effort by lead judgment | GPT-6 Sol; Grok 4.7 when the review needs to run code; Astra only with double approval | — |
 | Hard, well-specified implementation | FRONTIER | **Opus** subagent or **Grok 4.7 at xhigh** (CA 56) | GPT-6 Astra (CA 62) only with the user's double approval | Luna |
-| Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.7** below the 200K cliff under pre-approval (when the user has pre-approved Grok); **GPT-6 Sol** otherwise (CA 57, Codex's workhorse tier) | Sonnet 5 on pool grounds; Grok 4.6 where the record shows 4.7 regressing on this task shape | — |
-| Large-context implementation (>200K) | WORKHORSE | **Sonnet 5** (no surcharge) | GPT-6 Sol (long-context tier above 272K) | **Grok (cliff)**, Haiku (200K cap) |
+| Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.7** below the 200K cliff under pre-approval (when the user has pre-approved Grok); **GPT-6 Sol** otherwise (CA 57, Codex's workhorse tier) | Sonnet 5.5 on pool grounds; Grok 4.6 where the record shows 4.7 regressing on this task shape | — |
+| Large-context implementation (>200K) | WORKHORSE | **Sonnet 5.5** (no surcharge) | GPT-6 Sol (long-context tier above 272K) | **Grok (cliff)**, Haiku (200K cap) |
 | Mechanical edits, extraction, scanning | FAST | **GPT-6 Luna** | Haiku 4.5 | frontier seats |
 | Narrow typed triage (dedupe, support-check, rank, classify) — see jev.md | DECISION | **Jev** when opted in (advisory signal, ~$0.0002) | Luna / Haiku | Jev as acceptance, as a sole security gate, or on dates/arithmetic |
 | Repo-wide sweep (>500K) | any | Claude (1M ctx) | Codex up to its 872K max | **Grok (500K ceiling)** |

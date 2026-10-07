@@ -97,7 +97,7 @@
           "model": "sonnet",
           "effort": "high",
           "why": "in-harness subagent, 1M context with no surcharge; draws on the lead's own Claude allowance; no v4.3 score",
-          "plain": "Claude Sonnet 5 — best for very large files; uses the same Claude allowance I run on"
+          "plain": "Claude Sonnet 5.5 — best for very large files; uses the same Claude allowance I run on"
         }
       ],
       "judgment_prior": "grok-4.7",

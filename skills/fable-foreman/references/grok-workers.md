@@ -80,7 +80,7 @@ mostly about that token burn (and tighter guardrails in chat use), not a measure
 coding regression; none was found. On this account a one-word ping cost 222 output
 tokens on 4.7 vs 12 on 4.6 at `low` (one sample — a hint, not a measurement). So:
 
-The routing card decides which of these a job gets (everyday coding is a close call between Grok 4.7, GPT-6 Sol and Sonnet 5; review rows default to Grok 4.6). The evidence behind those rows:
+The routing card decides which of these a job gets (everyday coding is a close call between Grok 4.7, GPT-6 Sol and Sonnet 5.5; review rows default to Grok 4.6). The evidence behind those rows:
 
 - **Implementation (agentic coding, anything that runs tools or tests): `grok-4.7`.**
 - **Adversarial review / analysis (output-light, reasoning over text): `grok-4.6`** is
